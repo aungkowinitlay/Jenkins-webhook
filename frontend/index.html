@@ -2,29 +2,132 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Hello Nginx</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Nginx + Docker on Ubuntu Lab">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://172.237.65.190:5000;">
+    <title>Hello Nginx - Enhanced</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+        }
+        h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        p {
+            color: #555;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #message {
+            color: #d9534f;
+            font-weight: bold;
+        }
+        .success {
+            color: #28a745 !important;
+        }
+        .loading {
+            color: #007bff;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" role="main">
         <h1>🚀 Hello from Nginx + Docker on Ubuntu For Lab!</h1>
         <p>Your web server is running smoothly.</p>
 
-        <button onclick="getMessage()">Test Backend API</button>
-        <p>Response from backend: <span id="message">[Waiting for API]</span></p>
+        <button id="apiButton" onclick="getMessage()">Test Backend API</button>
+        <p>Response from backend: <span id="message" aria-live="polite">[Waiting for API]</span></p>
     </div>
 
     <script>
-    async function getMessage() {
-        try {
-            const res = await fetch("http://172.237.65.190:5000/api/message");
-            const data = await res.json();
-            document.getElementById("message").innerText = data.message;
-        } catch (error) {
-            document.getElementById("message").innerText = "Error contacting backend";
-            console.error(error);
+        // API URL (configurable, ideally from environment variable)
+        const API_URL = 'http://172.237.65.190:5000/api/message';
+
+        // Debounce function to prevent multiple rapid clicks
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
         }
-    }
+
+        async function getMessage() {
+            const button = document.getElementById('apiButton');
+            const messageElement = document.getElementById('message');
+
+            // Disable button and show loading state
+            button.disabled = true;
+            messageElement.innerText = 'Loading...';
+            messageElement.classList.add('loading');
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP error! Status: ${res.status}`);
+                    return;
+                }
+
+                const data = await res.json();
+                messageElement.innerText = data.message || 'No message received';
+                messageElement.classList.remove('loading');
+                messageElement.classList.add('success');
+            } catch (error) {
+                messageElement.innerText = `Error: ${error.message || 'Could not contact backend'}`;
+                messageElement.classList.remove('loading');
+                console.error('API Error:', error);
+            } finally {
+                // Re-enable button after request completes
+                button.disabled = false;
+            }
+        }
+
+        // Attach debounced event listener
+        document.getElementById('apiButton').addEventListener('click', debounce(getMessage, 500));
     </script>
 </body>
 </html>
